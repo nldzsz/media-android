@@ -10,6 +10,7 @@ import android.util.Log;
 import com.media.Audio.ADAudioMediaPlayer;
 import com.media.Audio.ADAudioTrackPlayer;
 import com.media.Common.DDlog;
+import com.media.Common.PathTool;
 
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -24,6 +25,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // 测试手机存储
+        PathTool.testPath(this);
     }
 
     @Override
@@ -48,12 +52,12 @@ public class MainActivity extends AppCompatActivity {
 //        bPlayer = new ADAudioTrackPlayer(this,"test_441_s16be_2.amr",44100,
 //                AudioFormat.ENCODING_PCM_16BIT,AudioFormat.CHANNEL_OUT_STEREO,true);
 
-        bPlayer = new ADAudioTrackPlayer(this,"test_441_s16le_2.amr",44100,
-                AudioFormat.ENCODING_PCM_16BIT,AudioFormat.CHANNEL_OUT_STEREO,false);
+//        bPlayer = new ADAudioTrackPlayer(this,"test_441_s16le_2.amr",44100,
+//                AudioFormat.ENCODING_PCM_16BIT,AudioFormat.CHANNEL_OUT_STEREO,false);
 
 //        bPlayer = new ADAudioTrackPlayer(this,"test_441_f32le_2.amr",44100,
 //                AudioFormat.ENCODING_PCM_FLOAT,AudioFormat.CHANNEL_OUT_STEREO,false);
 
-        bPlayer.play();
+//        bPlayer.play();
     }
 }
