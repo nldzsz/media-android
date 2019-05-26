@@ -13,9 +13,6 @@
 enum Sample_format_ {
     Sample_format_SignedInteger_8,
     Sample_format_SignedInteger_16,         // 每个采样用有符号16位表示
-    Sample_format_SignedInteger_20,         // 每个采样用有符号20位表示
-    Sample_format_SignedInteger_24,         // 每个采样用有符号24位表示
-    Sample_format_SignedInteger_28,         // 每个采样用有符号28位表示
     Sample_format_SignedInteger_32          // 每个采样用有符号32位表示
 };
 typedef enum Sample_format_ Sample_format;

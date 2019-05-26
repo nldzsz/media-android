@@ -11,8 +11,8 @@ aux_source_directory(${COMMON_DIR} com_cpp)
 aux_source_directory(${OPENSLES_DIR} opensles_cpp)
 
 # she zhi .h tou wen jian mu lu
-include_directories(COMMON_DIR)
-include_directories(OPENSLES_DIR)
+include_directories(${COMMON_DIR})
+include_directories(${OPENSLES_DIR})
 
 # yin ru android log ku
 find_library( # Sets the name of the path variable.

@@ -19,7 +19,7 @@ SLAudioPlayer::~SLAudioPlayer() {
 
 void SLAudioPlayer::pcmBufferCallBack(SLAndroidSimpleBufferQueueItf, void * context)
 {
-    LOGD("目前线程 %d",pthread_self());
+    LOGD("目前线程 %ld",pthread_self());
     SLAudioPlayer *ap = (SLAudioPlayer*)context;
     ap->notifyThreadLock();
 }
@@ -175,7 +175,7 @@ void SLAudioPlayer::putAudioData(char * buff,int size)
 
     if (fSample_format == Sample_format_SignedInteger_8) {
         char *newBuffer = (char *)buff;
-        uint8_t *useBuffer = outputBuffer[currentOutputBuffer];
+        char *useBuffer = outputBuffer[currentOutputBuffer];
 
         for (int i = 0; i < size; ++i) {
             useBuffer[indexOfOutput++] = newBuffer[i];
@@ -291,13 +291,13 @@ void SLAudioPlayer::initThreadLock()
 void SLAudioPlayer::destroyThreadLock()
 {
     pthread_mutex_destroy(&mutex_out);
-    pthread_cond_destroy(&mutex_out);
+    pthread_cond_destroy(&cont_out);
 }
 void SLAudioPlayer::waitThreadLock()
 {
     pthread_mutex_lock(&mutex_out);
     if (cont_val == 0) {
-        pthread_cond_wait(&cont_out,NULL);
+        pthread_cond_wait(&cont_out,&mutex_out);
     }
     cont_val = 1;
     pthread_mutex_unlock(&mutex_out);

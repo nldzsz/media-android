@@ -14,10 +14,12 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.URI;
 
-public class ADAudioMediaPlayer {
+public class ADAudioMediaPlayer implements AudioPlayInterface{
 
     // 上下文
     private Context mContext;
+    // 播放方式 0 通过rawId,1 通过path 2 通过 Uri
+    private int mType = 0;
 
     /** MediaPlayer类
      * 1、它位于安卓的多媒体框架android.media包下
@@ -27,31 +29,30 @@ public class ADAudioMediaPlayer {
     // 音频播放器
     private MediaPlayer madioPlayer;
 
-    public ADAudioMediaPlayer(Context ct) {
-        mContext = ct;
-    }
-
     // 直接用Raw资源文件播放
-    public void playWithRawId(int rawId) {
+    public ADAudioMediaPlayer(Context ct,int rawId) {
+        mContext = ct;
+
         // 初始化
         madioPlayer = MediaPlayer.create(mContext,rawId);
-        // 直接播放，不需要调用preapare()函数
-        madioPlayer.start();
+        mType = 0;
     }
 
-    public void playLocal(String path) {
-        if (madioPlayer == null) {
-            madioPlayer = new MediaPlayer();
-        }
+    // 播放本地文件
+    public ADAudioMediaPlayer(Context ct,String path) {
+        mContext = ct;
+        mType = 1;
 
+        madioPlayer = new MediaPlayer();
         /**
          *  通过这种方式，只需要创建一次MediaPlayer对象即可，当需要更换播放文件时，不用重复创建对象；这对于播放列表文件或重复播放使用
          * */
         try {
             AssetFileDescriptor as = PathTool.getAssetFileDescriptor(mContext,path);
-            madioPlayer.setDataSource(as.getFileDescriptor());
+//            madioPlayer.setDataSource(as.getFileDescriptor());    // 此方式播放会出错
+            madioPlayer.setDataSource(as);
             madioPlayer.prepare();
-            madioPlayer.start();
+
         } catch (IOException io) {
             io.printStackTrace();
         }
@@ -60,16 +61,26 @@ public class ADAudioMediaPlayer {
     /** 播放远程音频文件
      * 注意要添加访问网络的权限 <uses-permission android:name="android.permission.INTERNET" />
      * */
-    public void playRomote(String url) {
-        if (madioPlayer == null) {
-            madioPlayer = new MediaPlayer();
-        }
+    public ADAudioMediaPlayer(Context ct,Uri uri) {
+        mContext = ct;
+        DDlog.logd(uri.toString());
+        madioPlayer = new MediaPlayer();
+        mType = 2;
 
         try {
-            Uri uri = PathTool.getUriByString(url);
-            DDlog.logd(uri.toString());
             madioPlayer.setDataSource(mContext,uri);
             madioPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        } catch (IOException io) {
+            io.printStackTrace();
+        }
+    }
+
+    @Override
+    public void play() {
+        // 直接播放，不需要调用preapare()函数
+        if (mType == 0 || mType == 1) {
+            madioPlayer.start();
+        } else if (mType == 2) {
             madioPlayer.prepareAsync();
             madioPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                 @Override
@@ -77,9 +88,6 @@ public class ADAudioMediaPlayer {
                     madioPlayer.start();
                 }
             });
-
-        } catch (IOException io) {
-            io.printStackTrace();
         }
     }
 

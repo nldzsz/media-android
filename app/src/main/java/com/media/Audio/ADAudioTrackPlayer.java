@@ -18,11 +18,20 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-public class ADAudioTrackPlayer {
+public class ADAudioTrackPlayer implements AudioPlayInterface{
     /** AudioTrack
      * 1、AudioTrack 是比较底层的android api，它只负责播放原始的PCM裸数据
      * 2、
      * */
+
+    //// ========= audiotrack 播放asserts目录下的音频文件 =========/////
+    /** 遇到问题 1、当文件大小超过1M时，无法通过AssetManager获取InputStream
+     *  解决方案 1、MP3，arm等格式文件不受此限制，将PCM文件后缀改为.amr即可
+     * */
+    /** 遇到问题2：通过getAssets().openFd().getFileDescriptor()获取到的FileDescriptor来构造FileInputStream对象，读取数据时不是从文件开头读取
+     *  解决方案：getAssets().open()方式获取InputStream来读取文件中数据，是从文件头开始的。
+     * */
+
     private Context mContext;
     private AudioTrack aTrack;
     // 播放器的最小缓冲区大小

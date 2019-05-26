@@ -11,29 +11,56 @@
 #include "common/CPPLog.h"
 #include "common/Common.h"
 
-#include <SLES/OpenSLES.h>
-#include <SLES/OpenSLES_Android.h>
+#include "SLAudioPlayer.h"
+#include "opensles/SLAudioPlayer.h"
 
-// 定义引擎对象接口，该接口是使用OpenSL ES的唯一入口
-SLObjectItf enginObject = NULL;
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_media_Audio_ADOpenSLES_playAudio(JNIEnv *env, jobject instance, jstring path_,
+                                          jint sample_rate, jint ch_layout, jint format) {
+    const char *path = env->GetStringUTFChars(path_, 0);
+    FILE *pcmFile = fopen(path,"r");
 
-// 创建一个线程安全的对象引擎接口
-SLresult initSLEngine()
-{
-    SLresult result;
-    // OpenSL ES for Android is designed to be thread-safe,
-    // so this option request will be ignored, but it will
-    // make the source code portable to other platforms.
-    SLEngineOption engineOptions[] = {{SL_ENGINEOPTION_THREADSAFE,SL_BOOLEAN_TRUE}};
-    // Create the OpenSL ES engine object
-    return slCreateEngine(&enginObject, ARRAY_LEN(engineOptions), engineOptions, 0, // no interfaces
-                          0, // no interfaces
-                          0); // no required
-}
+    if (pcmFile == NULL) {
+        LOGD("file is null");
+        env->ReleaseStringUTFChars(path_, path);
+        return;
+    }
 
-extern "C" void
-Java_com_media_Audio_ADOpenSLES_playAudio(JNIEnv *env, jobject instance, jstring path,
-                                          jint sr, jint ch_layout, int format)
-{
+    SLAudioPlayer *player = new SLAudioPlayer(sample_rate,(Sample_format)format,(Channel_Layout)ch_layout);
+    int perid = 20; // 20ms
+    int bufSize = sample_rate * perid / 1000;
+    int exit = 0;
+    if (format == Sample_format_SignedInteger_8) {
+        char buffer[bufSize];
+        while (!exit && !feof(pcmFile)) {
+            if (fread((char *)buffer, bufSize, 1, pcmFile) != 1) {
+                LOGD("failed to read data \n ");
+                break;
+            }
+            player->putAudioData(buffer,bufSize);
+        }
+    } else if(format == Sample_format_SignedInteger_16) {
+        int16_t buffer[bufSize];
+        while (!exit && !feof(pcmFile)) {
+            if (fread((char *)buffer, bufSize* sizeof(int16_t), 1, pcmFile) != 1) {
+                LOGD("failed to read data \n ");
+                break;
+            }
+            player->putAudioData((char *)buffer,bufSize);
+        }
+    } else if (format == Sample_format_SignedInteger_32) {
+        int32_t buffer[bufSize];
+        while (!exit && !feof(pcmFile)) {
+            if (fread((char *)buffer, bufSize* sizeof(int32_t), 1, pcmFile) != 1) {
+                LOGD("failed to read data \n ");
+                break;
+            }
+            player->putAudioData((char *)buffer,bufSize);
+        }
+    }
 
+    player->closeAudioPlayer();
+    fclose(pcmFile);
+    env->ReleaseStringUTFChars(path_, path);
 }

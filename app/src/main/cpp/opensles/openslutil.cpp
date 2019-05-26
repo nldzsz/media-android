@@ -53,7 +53,7 @@ SLuint32 getSampleRate(Sample_rate sample_rate)
     return sr;
 }
 
-SLuint32 getChannel_layout_Type(Channel_Layout type)
+SLuint32 getChannel_layout_Channels(Channel_Layout type)
 {
     if (type == Channel_Layout_Mono) {
         return 1;
@@ -62,4 +62,15 @@ SLuint32 getChannel_layout_Type(Channel_Layout type)
     }
 
     return 2;
+}
+
+SLuint32 getChannel_layout_Type(Channel_Layout type)
+{
+    if (type == Channel_Layout_Mono) {
+        return SL_SPEAKER_FRONT_CENTER; // 单声道
+    } else if(type == Channel_Layout_steoro){
+        return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;  // 双声道 前左前右
+    }
+
+    return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;;
 }
