@@ -6,12 +6,13 @@
 
 
 
-SLAudioPlayer::SLAudioPlayer(Sample_rate rate, Sample_format format, Channel_Layout ch)
-:fSample_rate(rate),fSample_format(format),fChannel_layout(ch)
+SLAudioPlayer::SLAudioPlayer(int bufSamples,Sample_rate rate, Sample_format format, Channel_Layout ch)
+        :outBufSamples(bufSamples),fSample_rate(rate),fSample_format(format),fChannel_layout(ch)
 {
     LOGD("SLAudioPlayer()");
     slContext = new OpenSLESContext();
-
+    initBuffers();
+    initThreadLock();
 }
 SLAudioPlayer::~SLAudioPlayer() {
 
@@ -56,14 +57,17 @@ void SLAudioPlayer::openAudioPlayer() {
      * */
     SLDataLocator_AndroidSimpleBufferQueue android_queue={SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,2};
     SLuint32 chs = getChannel_layout_Channels(fChannel_layout);
-
+    SLuint32 ch = getChannel_layout_Type(fChannel_layout);
+    SLuint32 sr = getSampleRate(fSample_rate);
+    SLuint32 fo = getPCMSample_format(fSample_format);
+    LOGD("声道数 %d 声道类型 %d 采样率 %d 采样格式 %d",chs,ch,sr,fo);
     SLDataFormat_PCM pcm={
             SL_DATAFORMAT_PCM,//播放pcm格式的数据
-            chs,//2个声道（立体声）
-            SL_SAMPLINGRATE_44_1,//44100hz的频率
-            SL_PCMSAMPLEFORMAT_FIXED_16,//位数 16位
-            SL_PCMSAMPLEFORMAT_FIXED_16,//和位数一致就行
-            SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT,//立体声（前左前右）
+            chs,//声道个数
+            sr,//采样率
+            fo,//位数
+            fo,//和位数一致就行
+            ch,//立体声（前左前右）
             SL_BYTEORDER_LITTLEENDIAN//数据存储是小端序
     };
     /** SLDataSource 表示输入缓冲区，和输出缓冲区一样，它由数据类型和数据格式组成
@@ -114,31 +118,40 @@ void SLAudioPlayer::openAudioPlayer() {
      *  1、CreateAudioPlayer()第五个参数不能为0，否则audioSrc将没有数据送给audioSnk
      *  2、要写入数据的回调函数在单独的线程中，大概每12ms-20ms定期调用。
      * */
-    const SLInterfaceID ids[2] = {SL_IID_BUFFERQUEUE, SL_IID_VOLUME};
-    const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
-    result = (*engineItf)->CreateAudioPlayer(engineItf, &playerObject, &slDataSource, &audioSink, 2, ids, req);
+    const SLInterfaceID ids[1] = {SL_IID_BUFFERQUEUE};
+    const SLboolean req[1] = {SL_BOOLEAN_TRUE};
+    result = (*engineItf)->CreateAudioPlayer(engineItf, &playerObject, &slDataSource, &audioSink, 1, ids, req);
     //初始化播放器
     result = (*playerObject)->Realize(playerObject, SL_BOOLEAN_FALSE);
 
 //    注册回调缓冲区 获取缓冲队列接口
     result = (*playerObject)->GetInterface(playerObject, SL_IID_BUFFERQUEUE, &pcmBufferQueueItf);
     //注册缓冲接口回调，开始播放后，此函数将
-    (*pcmBufferQueueItf)->RegisterCallback(pcmBufferQueueItf, pcmBufferCallBack, this);
+    result = (*pcmBufferQueueItf)->RegisterCallback(pcmBufferQueueItf, SLAudioPlayer::pcmBufferCallBack, this);
+    if (result != SL_RESULT_SUCCESS) {
+        LOGD("RegisterCallback fail %d",result);
+    }
 
     // 获取音量接口 用于设置音量
-    (*playerObject)->GetInterface(playerObject, SL_IID_VOLUME, &volInf);
-    (*volInf)->SetVolumeLevel(volInf,100*50);
+//    (*playerObject)->GetInterface(playerObject, SL_IID_VOLUME, &volInf);
+//    (*volInf)->SetVolumeLevel(volInf,100*50);
 
     //    得到接口后调用  获取Player接口
     result = (*playerObject)->GetInterface(playerObject, SL_IID_PLAY, &playerInf);
 //    开始播放
-    (*playerInf)->SetPlayState(playerInf, SL_PLAYSTATE_PLAYING);
+    result = (*playerInf)->SetPlayState(playerInf, SL_PLAYSTATE_PLAYING);
+    if (result != SL_RESULT_SUCCESS) {
+        LOGD("SetPlayState fail %d",result);
+    }
+    LOGD("结束");
+    notifyThreadLock();
 }
 
 /** 释放 OpenSL ES资源，
  *  由于OpenSL ES的内存是由系统自动分配的，所以释放内存时只需要调用Destroy释放对应的SLObjectItf对象即可，然后它的属性ID接口对象直接置为NULL
  * */
 void SLAudioPlayer::closeAudioPlayer() {
+    LOGD("closeAudioPlayer()");
     // 释放音频播放器组件对象
     if (playerObject != NULL) {
         (*playerObject)->Destroy(playerObject);
@@ -159,6 +172,9 @@ void SLAudioPlayer::closeAudioPlayer() {
         slContext->releaseResources();
         slContext = NULL;
     }
+
+    destroyBuffers();
+    destroyThreadLock();
 }
 
 /**  outBufSamples:是一个固定的数值；表示每次发往音频数据缓冲区的采样个数
@@ -204,10 +220,10 @@ void SLAudioPlayer::putAudioData(char * buff,int size)
         for (int i = 0; i < size; ++i) {
             useBuffer[indexOfOutput++] = newBuffer[i];
             if (indexOfOutput >= outBufSamples) {   // 说明填满了一个缓冲区，则发送给OpenSL ES
-
+                LOGD("被阻塞");
                 // 发送之前需要得到可以发送的条件
                 waitThreadLock();
-
+                LOGD("阻塞完成");
                 // 发送数据
                 (*pcmBufferQueueItf)->Enqueue(pcmBufferQueueItf,useBuffer,outBufSamples* sizeof(short));
 
@@ -249,10 +265,7 @@ void SLAudioPlayer::putAudioData(char * buff,int size)
 
 void SLAudioPlayer::initBuffers()
 {
-    int outchannels = getChannel_layout_Channels(fChannel_layout);
-    int bufferframes = fSample_rate * PERIOD/1000;
-
-    if((outBufSamples = bufferframes*outchannels) != 0) {
+    if(outBufSamples != 0) {
         if (fSample_format == Sample_format_SignedInteger_8) {
             outputBuffer[0] = (char *) calloc((size_t)outBufSamples, sizeof(char));
             outputBuffer[1] = (char *) calloc((size_t)outBufSamples, sizeof(char));
@@ -263,7 +276,6 @@ void SLAudioPlayer::initBuffers()
             outputBuffer[0] = (char *) calloc((size_t)outBufSamples, sizeof(int));
             outputBuffer[1] = (char *) calloc((size_t)outBufSamples, sizeof(int));
         }
-
     }
 
     currentOutputBuffer  = 0;
@@ -299,13 +311,13 @@ void SLAudioPlayer::waitThreadLock()
     if (cont_val == 0) {
         pthread_cond_wait(&cont_out,&mutex_out);
     }
-    cont_val = 1;
+    cont_val = 0;
     pthread_mutex_unlock(&mutex_out);
 }
 void SLAudioPlayer::notifyThreadLock()
 {
     pthread_mutex_lock(&mutex_out);
-    cont_val = 0;
+    cont_val = 1;
     pthread_cond_signal(&cont_out);
     pthread_mutex_unlock(&mutex_out);
 }

@@ -74,3 +74,16 @@ SLuint32 getChannel_layout_Type(Channel_Layout type)
 
     return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;;
 }
+
+SLuint32 getPCMSample_format(Sample_format format)
+{
+    if (format == Sample_format_SignedInteger_8){
+        return SL_PCMSAMPLEFORMAT_FIXED_8;
+    } else if(format == Sample_format_SignedInteger_16) {
+        return SL_PCMSAMPLEFORMAT_FIXED_16;
+    } else if(format == Sample_format_SignedInteger_32) {
+        return SL_PCMSAMPLEFORMAT_FIXED_32;
+    }
+
+    return SL_PCMSAMPLEFORMAT_FIXED_16;
+}

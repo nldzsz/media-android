@@ -12,9 +12,12 @@
 #include "openslutil.h"
 #define PERIOD 20   // 20ms 每次向缓冲区发送20ms的采样数据
 
+/** 备注：安卓设备貌似对8位32位音频无法播放
+ * */
 class SLAudioPlayer {
 private:
     OpenSLESContext *slContext;
+
     // 采样率
     Sample_rate fSample_rate;
     // 采样格式
@@ -52,7 +55,7 @@ private:
     static void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context);
 
 public:
-    SLAudioPlayer(Sample_rate rate,Sample_format format,Channel_Layout ch);
+    SLAudioPlayer(int bufSamples,Sample_rate rate,Sample_format format,Channel_Layout ch);
     virtual ~SLAudioPlayer();
 
     // 初始化并开始播放音频

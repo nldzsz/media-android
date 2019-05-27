@@ -41,6 +41,8 @@ public class ADOpenSLES implements AudioPlayInterface{
     }
 
     public void stop() {
+        stopAudio();
+
         if (mThread != null) {
             try {
                 mThread.join(); // 等待线程结束
@@ -59,4 +61,5 @@ public class ADOpenSLES implements AudioPlayInterface{
      *  采样率 取值8000-48000 ch_layout
      */
     native void playAudio(String path,int sample_rate,int ch_layout,int format);
+    native void stopAudio();
 }

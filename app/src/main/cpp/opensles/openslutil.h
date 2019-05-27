@@ -38,4 +38,7 @@ SLuint32 getChannel_layout_Channels(Channel_Layout type);
 // 将声道类型转换为OPenSL ES的声道类型
 SLuint32 getChannel_layout_Type(Channel_Layout type);
 
+// 将采样格式类型转换为OPenSL ES的类型
+SLuint32 getPCMSample_format(Sample_format format);
+
 #endif //MEDIA_ANDROID_OPENSLUTIL_H
