@@ -11,9 +11,12 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.media.Audio.ADAudioMediaPlayer;
@@ -54,7 +57,25 @@ public class MainActivity extends AppCompatActivity{
 
         // 测试手机存储
 //        PathTool.testPath(this);
+
+        Button btn = findViewById(R.id.button1);
+//        btn.setOnTouchListener(yuntaiHoriCalListioner);
     }
+
+    private View.OnTouchListener yuntaiHoriCalListioner = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                Log.d("tag","ACTION_DOWN");
+                return true;
+            } else if(event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                Log.d("tag","ACTION_UP");
+
+            }
+            Log.d("tag",event.toString());
+            return false;
+        }
+    };
 
     @Override
     protected void onResume() {

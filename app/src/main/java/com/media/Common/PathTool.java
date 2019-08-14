@@ -29,6 +29,20 @@ public class PathTool {
         return null;
     }
 
+    /** 获取assets目录下的文件流句柄
+     *  
+    */
+    static public InputStream getInputStream(Context context, String fileName) {
+        try {
+
+            return context.getAssets().open(fileName);
+        } catch (IOException io) {
+            io.printStackTrace();
+        }
+
+        return null;
+    }
+
 
     /** Uri位于android.net框架下
      * 1、它是统一资源描述符 由[scheme:]scheme-specific-part[#fragment]组成，既可以描述网络又可以描述本地
